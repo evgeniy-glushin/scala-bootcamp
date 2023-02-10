@@ -1,33 +1,32 @@
 package com.rockthejvm
 
 object JsonParser extends App {
-  trait JsonSerializer[A] {
-    def serialize(obj: A): String
-  }
+  def quotes(v: Any): String = "\"" + v + "\""
 
   case class User(fullName: String, age: Int)
 
-  implicit object UserSerializer extends JsonSerializer[User] {
-    override def serialize(user: User): String = {
-      ???
-      //JObject("fullName", JsonSerializer(user.fullName))
-    }
+  trait JConverter[T] {
+    def convert(value: T): JValue
   }
 
-  implicit object IntSerializer extends JsonSerializer[Int] {
-    override def serialize(obj: Int): String = ???
+   implicit object IntConverter extends JConverter[Int] {
+     override def convert(value: Int): JValue = JInt(value)
+   }
+
+  implicit object StringConverter extends JConverter[String] {
+    override def convert(value: String): JValue = JString(value)
+   }
+
+  implicit object ArrayConverter extends JConverter[List[JValue]] {
+     override def convert(value: List[JValue]): JValue = JArray(value)
+   }
+
+  implicit object UserConverter extends JConverter[User] {
+    override def convert(value: User): JValue = JUser(value)
   }
 
-  implicit object StringSerializer extends JsonSerializer[String] {
-    override def serialize(obj: String): String = ???
-  }
-
-  implicit object ListSerializer extends JsonSerializer[List[Int]]{
-    override def serialize(obj: List[Int]): String = ???
-  }
-
-  object JsonSerializer {
-    def apply[T](obj: T)(implicit serializer: JsonSerializer[T]): String = serializer.serialize(obj)
+  implicit class JValueOps[T](value: T) {
+    def toJson()(implicit converter: JConverter[T]) = converter.convert(value).stringify
   }
 
   sealed trait JValue {
@@ -36,20 +35,27 @@ object JsonParser extends App {
 
   final case class JObject(map: Map[String, JValue]) extends JValue {
     override def stringify: String = {
-      (for ((k, v) <- map) yield s"$k:${v.stringify}").mkString("{", ",", "}")
+      (for ((k, v) <- map) yield s"${quotes(k)}:${v.stringify}").mkString("{", ",", "}")
     }
   }
 
-  final case class IntJson(value: Int) extends JValue {
-    override def stringify: String = ???
+  final case class JInt(value: Int) extends JValue {
+    override def stringify: String = value.toString
   }
 
-  final case class UserJson(value: User) extends JValue {
-    override def stringify: String = ???
+  final case class JUser(value: User) extends JValue {
+    override def stringify: String = JObject(Map(
+      "fullName" -> JString(value.fullName),
+      "age" -> JInt(value.age))
+    ).stringify
   }
 
-  final case class StringJson(value: String) extends JValue {
-    override def stringify: String = ???
+  final case class JString(value: String) extends JValue {
+    override def stringify: String = quotes(value)
+  }
+
+  final case class JArray(value: List[JValue]) extends JValue {
+    override def stringify: String = value.map(x => x.stringify).mkString("[", ",", "]")
   }
 
   object JObject {
@@ -57,28 +63,15 @@ object JsonParser extends App {
   }
 
   val obj = JObject(Map(
-    "anyInt" -> IntJson(32),
-    "simpleString" -> StringJson("hello world"),
-    "user" -> UserJson(User("yevhen", 34)),
+    "anyInt" -> JInt(32),
+    "simpleString" -> JString("hello world"),
+    "arr" -> JArray(List(JInt(1), JInt(2), JInt(3))),
+    "user" -> JUser(User("yevhen", 34)),
     "nestedObj" -> JObject(Map(
-      "nestedUser" -> UserJson(User("ira", 18))
+      "nestedUser" -> JUser(User("ira", 18))
     ))
   ))
 
-  //println(obj.stringify)
-
-  val m = Map(
-    "asxc" -> 1,
-    "a" -> 2
-  )
-
-  val mm = for ((k, v) <- m) yield s"$k:$v"
-
-  println(mm.mkString("{", ",", "}"))
-  println(m.mkString("{", ",", "}"))
-
-//  var userJson = JsonSerializer(User("yevhen", 34)) // {"fullName": "yevhen", "age": 34}
-//  var intJson = JsonSerializer(34) // "34"
-//  var stringJson = JsonSerializer("34") // "34"
-//  var listJson = JsonSerializer(List(1,2,3)) // "[1,2,3]"
+  println(obj.stringify)
+  println(User("yev", 34).toJson())
 }
