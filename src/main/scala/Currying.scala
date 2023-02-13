@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object Currying extends App {
   def formatList(format: String, nums: List[Double]): List[String] = {
     nums.map(n => format.format(n))

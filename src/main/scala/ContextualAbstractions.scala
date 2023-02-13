@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object  ContextualAbstractions {
 
   // TODO update to Scala 3

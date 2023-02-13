@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import scala.util.{Failure, Success, Try}
 
 // Type classes:

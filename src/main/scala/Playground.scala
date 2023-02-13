@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration.DurationInt

@@ -1,5 +1,15 @@
-name := "scala-at-light-speed"
+ThisBuild / version := "0.1.0-SNAPSHOT"
 
-version := "0.1"
+ThisBuild / scalaVersion := "3.1.3"
 
-scalaVersion := "2.13.1"
+val catsVersion = "2.7.0"
+
+libraryDependencies ++= Seq(
+  "org.typelevel" %% "cats-core" % catsVersion,
+)
+
+
+lazy val root = (project in file("."))
+  .settings(
+    name := "scala3-bootcamp2"
+  )

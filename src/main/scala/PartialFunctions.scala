@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object PartialFunctions extends App {
   val pf: PartialFunction[String, String] = {
     case "yevhen" => "me"

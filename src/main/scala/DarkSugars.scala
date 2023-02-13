@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object DarkSugars extends App {
   def singleArg(arg: Int) = s"This is my arg: $arg"
 

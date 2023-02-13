@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object Basics extends App {
 
   // defining a value

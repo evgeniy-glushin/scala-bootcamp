@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import scala.annotation.tailrec
 
 object FunctionalCollections extends App {
@@ -25,7 +23,7 @@ object FunctionalCollections extends App {
     override def map[B](f: A => B): MySet[B] = new EmptyLinkedSet[B]
     override def flatMap[B](f: A => MySet[B]): MySet[B] = new EmptyLinkedSet
     override def filter(predicate: A => Boolean): MySet[A] = this
-    override def foreach(f: A => Unit): Unit = Unit
+    override def foreach(f: A => Unit): Unit = ()
     override def -(elem: A): MySet[A] = this
     override def &(another: MySet[A]): MySet[A] = this
      override def --(another: MySet[A]): MySet[A] = another.map(identity)

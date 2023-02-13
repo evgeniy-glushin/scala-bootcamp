@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 object PatternMatching extends App {
 
   // switch expression

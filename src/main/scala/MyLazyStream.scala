@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import scala.annotation.tailrec
 
 object MyLazyStream extends App {

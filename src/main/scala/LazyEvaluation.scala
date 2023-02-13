@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import scala.annotation.tailrec
 
 object LazyEvaluation extends App {
@@ -47,7 +45,7 @@ object LazyEvaluation extends App {
 
     override def toList(n: Int): List[A] = ???
 
-    override def foreach(f: A => Unit): Unit = Unit
+    override def foreach(f: A => Unit): Unit = ()
 
     override def map[B](f: A => B): MyStream[B] = new EmptyStream[B]
 

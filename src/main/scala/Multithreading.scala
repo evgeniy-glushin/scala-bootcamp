@@ -1,5 +1,3 @@
-package com.rockthejvm
-
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
