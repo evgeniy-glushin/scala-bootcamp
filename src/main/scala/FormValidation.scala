@@ -50,7 +50,6 @@ object FormValidation extends App {
 
   def ap[W[_], A, B](wf: W[A => B])(wa: W[A]): W[B] = ???
   def product[W[_], A, B](wa: W[A], wb: W[B])(implicit applicative: Applicative[W]): W[(A, B)] =
-    val wrapper: W[B => (A,B)] = applicative.map(wa)(a => (b: B) => (a,b))
-    ap(wrapper)(wb)
-    applicative.product(wa, wb)
+    ap(applicative.map(wa)(a => (b: B) => (a,b)))(wb)
+    //applicative.product(wa, wb)
 }
