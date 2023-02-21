@@ -1,4 +1,4 @@
-import cats.Semigroupal
+import cats.{Apply, Semigroupal}
 
 object SemigroupalExercise extends App {
   import cats.Monad
@@ -16,4 +16,10 @@ object SemigroupalExercise extends App {
   val zipSemigroupal: Semigroupal[List] = new Semigroupal[List] {
     override def product[A, B](fa: List[A], fb: List[B]): List[(A, B)] = fa.zip(fb)
   }
+
+  trait MyFlatMap[M[_]] extends Apply[M]:
+    def flatMap[A, B](ma: M[A])(f: A => M[B]): M[B]
+
+    def ap[A, B](wf: M[A => B])(wa: M[A]): M[B] =
+      flatMap(wa)(a => map(wf)(f => f(a)))
 }
