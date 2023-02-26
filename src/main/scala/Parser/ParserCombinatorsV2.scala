@@ -10,8 +10,9 @@ object ParserCombinatorsV2 extends App {
   object Library:
     import cats.syntax.all.*
 
+    // TODO: consider using monad transformers
     type ParseResult[T] = Either[String, (T, String)]
-    type Parser[T] = Reader[String, ParseResult[T]]
+    type Parser[T] = Reader[String, ParseResult[T]] // TODO: conider using State
 
     implicit object ParserFunctor extends Functor[Parser]:
       override def map[A, B](fa: Parser[A])(f: A => B): Parser[B] =
