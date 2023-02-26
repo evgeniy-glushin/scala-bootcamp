@@ -1,24 +1,28 @@
 package Parser
 
-import cats.data.Reader
-import cats.{Applicative, Functor, Semigroup, SemigroupK}
+import cats.data.{Reader, ReaderT}
+import cats.{Applicative, Functor, Id, Semigroup, SemigroupK}
 import cats.syntax.all.*
 
 object Combinators:
   type ParseResult[T] = Either[String, (T, String)]
   type Parser[T] = Reader[String, ParseResult[T]]
 
+  // TODO: Functor
+  def map[A, B](container: Parser[A])(f: A => B): Parser[B] =
+    container.map {
+      case Left(err) => Left(err)
+      case Right((x, rem)) => Right((f(x), rem))
+    }
+
+  def flatMap[A, B](container: Parser[A])(f: A => Parser[B]) = ???
+
   implicit object ParserMonad extends
-      Applicative[Parser],
       SemigroupK[Parser],
       Functor[Parser]:
 
     override def map[A, B](fa: Parser[A])(f: A => B): Parser[B] =
       fa.map(a => a.map((v, remaining) => (f(v), remaining)))
-
-    override def pure[A](x: A): Parser[A] = ???
-
-    override def ap[A, B](ff: Parser[A => B])(fa: Parser[A]): Parser[B] = ???
 
     override def combineK[A](p1: Parser[A], p2: Parser[A]): Parser[A] =
       Parser { str =>
@@ -39,10 +43,24 @@ object Combinators:
 
   import cats.instances.list._
   import cats.syntax.traverse._
+  import cats.instances.either._
+//
+//  given parserResultApplicative: Applicative[ParseResult] with
+//    override def pure[A](x: A): ParseResult[A] = Right((x, ""))
+//    override def ap[A, B](ff: ParseResult[A => B])(fa: ParseResult[A]): ParseResult[B] = fa.ap()
 
+  // TODO: move to ParserMonad
   given parserCharApplicative: Applicative[Parser] with
-    override def pure[A](x: A): Parser[A] = ???
+    override def pure[A](x: A): Parser[A] = Parser { str => Right((x, str)) }
     override def ap[A, B](ff: Parser[A => B])(fa: Parser[A]): Parser[B] = ???
+      //val x = fa.flatMap(a => ff.map(f => f.map(f1 => f1._1(a))))
+  //fa.ap(ff)
+//      for
+//        rf <- ff
+//        ra <- fa
+//      yield Parser { str =>
+//
+//      }
 
   def pstring(str: String): Parser[String] =
     val pList: Parser[List[Char]] = str.map(pchar).toList.sequence
@@ -98,4 +116,20 @@ object ParserCombinatorsV3 extends App {
 //  println(mapped("123dsvc"))
   //println(parseThreeDigits("123"))
   println(parseABC("ABC"))
+
+//  type ParseResult[T] = Either[String, (T, String)]
+//  type Parser[T] = Reader[String, ParseResult[T]]
+
+  type MyResult[T] = Either[String, T]
+  type MyParserT[T] = ReaderT[Id, String, MyResult[T]]
+  type MyParser[T] = Reader[String, MyResult[T]]
+  val readerT = new MyParserT(s => Right(s))
+  //readerT.map(x => )
+
+  val reader = new MyParser(s => Right(s))
+  //reader.map(x => )
+
+  given parserCharApplicative: Applicative[MyParserT] with
+    override def pure[A](x: A): MyParserT[A] = ???
+    override def ap[A, B](ff: MyParserT[A => B])(fa: MyParserT[A]): MyParserT[B] = ???
 }
