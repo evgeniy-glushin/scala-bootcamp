@@ -46,8 +46,7 @@ object Combinators:
 
   import ParserMonad.*
 
-  def pchar(charToMatch: Char): Parser[Char] =
-    Parser { str =>
+  def pchar(charToMatch: Char): Parser[Char] = Parser { str =>
       if str == "" then Left("No more input")
       else if str.head == charToMatch then Right(charToMatch, str.tail)
       else Left(s"Expecting '$charToMatch'. Got '${str.head}'")
@@ -55,7 +54,7 @@ object Combinators:
 
   def pstring(str: String): Parser[String] =
     val pList: Parser[List[Char]] = str.map(pchar).toList.sequence
-    pList.map(_.map((a, b) => (a.mkString(""), b)))
+    pList |> (a => a.mkString(""))
 
   def choice[T](list: List[Parser[T]])(using semigroup: SemigroupK[Parser]): Parser[T] =
     list.reduce((acc, cur) => semigroup.combineK(acc, cur))
@@ -69,8 +68,14 @@ object Combinators:
     Parser(str => Right(parseZeroOrMore(p)(str)))
 
   /// matches one or more occurences of the specified parser
-  def many1[T](p: Parser[T])(using monad: FlatMap[Parser]): Parser[List[T]] =
-    many(p) >>= (tail => monad.map(p)(head => head :: tail))
+  def many1[T](p: Parser[T]): Parser[List[T]] =
+    many(p) >>= (tail => p |> (head => head :: tail))
+
+  def manyChars(p: Parser[Char]): Parser[String] =
+    many(p) |> (chars => chars.mkString(""))
+
+  def manyChars1(p: Parser[Char]): Parser[String] =
+    many1(p) |> (chars => chars.mkString(""))
 
   def parseZeroOrMore[T](p: Parser[T]) (str: String): (List[T], String) =
     p.run(str) match
@@ -80,15 +85,13 @@ object Combinators:
         val values = firstValue :: subsequentValues
         (values,  subsequentRemaining)
 
-  def manyChars1 (cp: Parser[Char]): Parser[String] = ???
-
   extension[A] (p1: Parser[A])
     def andThen[B](p2: Parser[B]): Parser[(A, B)]=
       Parser { str =>
         for
           res1 <- p1.run(str)
           res2 <- p2.run(res1._2)
-        yield ((res1._1, res2._1), res2._2)
+        yield ((res1._1, res2._1), res2._2) // TODO: refactor
       }
 
     def |+| (p2: Parser[A]): Parser[(A, A)] = p1.andThen(p2)
@@ -96,8 +99,8 @@ object Combinators:
     def >>= [B](f: A => Parser[B])(using monad: FlatMap[Parser]): Parser[B] =
       monad.flatMap(p1)(f)
 
-//    def <!> [B](f: A => B)(using functor: Functor[Parser]): Parser[B] =
-//      functor.map(p1)(f)
+    def |> [B](f: A => B)(using functor: Functor[Parser]): Parser[B] =
+      functor.map(p1)(f)
 
 
 object ParserCombinatorsV3 extends App {
