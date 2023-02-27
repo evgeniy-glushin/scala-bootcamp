@@ -1,28 +1,36 @@
 package Parser
 
 import cats.data.{Reader, ReaderT}
-import cats.{Applicative, Functor, Id, Semigroup, SemigroupK}
+import cats.{Applicative, FlatMap, Functor, Id, Semigroup, SemigroupK}
 import cats.syntax.all.*
 
 object Combinators:
   type ParseResult[T] = Either[String, (T, String)]
   type Parser[T] = Reader[String, ParseResult[T]]
 
-  // TODO: Functor
-  def map[A, B](container: Parser[A])(f: A => B): Parser[B] =
-    container.map {
-      case Left(err) => Left(err)
-      case Right((x, rem)) => Right((f(x), rem))
-    }
-
-  def flatMap[A, B](container: Parser[A])(f: A => Parser[B]) = ???
-
   implicit object ParserMonad extends
       SemigroupK[Parser],
-      Functor[Parser]:
+      Functor[Parser],
+      Applicative[Parser],
+      FlatMap[Parser]:
+
+    override def pure[A](x: A): Parser[A] =
+      Parser { str => Right((x, str)) }
+
+    override def ap[A, B](ff: Parser[A => B])(fa: Parser[A]): Parser[B] =
+      flatMap(ff)(f => map(fa)(f))
 
     override def map[A, B](fa: Parser[A])(f: A => B): Parser[B] =
       fa.map(a => a.map((v, remaining) => (f(v), remaining)))
+
+    def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B] = Parser { str =>
+        p(str) match {
+          case Left(error) => Left(error)
+          case Right((a, remaining)) => f(a)(remaining)
+        }
+      }
+
+    override def tailRecM[A, B](a: A)(f: A => Parser[Either[A, B]]): Parser[B] = ???
 
     override def combineK[A](p1: Parser[A], p2: Parser[A]): Parser[A] =
       Parser { str =>
@@ -31,8 +39,12 @@ object Combinators:
           case Left(_) => p2.run(str)
       }
 
+  end ParserMonad
+
   object Parser:
     def apply[T](f: String => ParseResult[T]): Parser[T] = Reader(f)
+
+  import ParserMonad.*
 
   def pchar(charToMatch: Char): Parser[Char] =
     Parser { str =>
@@ -41,30 +53,9 @@ object Combinators:
       else Left(s"Expecting '$charToMatch'. Got '${str.head}'")
     }
 
-  import cats.instances.list._
-  import cats.syntax.traverse._
-  import cats.instances.either._
-//
-//  given parserResultApplicative: Applicative[ParseResult] with
-//    override def pure[A](x: A): ParseResult[A] = Right((x, ""))
-//    override def ap[A, B](ff: ParseResult[A => B])(fa: ParseResult[A]): ParseResult[B] = fa.ap()
-
-  // TODO: move to ParserMonad
-  given parserCharApplicative: Applicative[Parser] with
-    override def pure[A](x: A): Parser[A] = Parser { str => Right((x, str)) }
-    override def ap[A, B](ff: Parser[A => B])(fa: Parser[A]): Parser[B] = ???
-      //val x = fa.flatMap(a => ff.map(f => f.map(f1 => f1._1(a))))
-  //fa.ap(ff)
-//      for
-//        rf <- ff
-//        ra <- fa
-//      yield Parser { str =>
-//
-//      }
-
   def pstring(str: String): Parser[String] =
     val pList: Parser[List[Char]] = str.map(pchar).toList.sequence
-    pList.map(_.map((a, b) => (a.toString, b)))
+    pList.map(_.map((a, b) => (a.mkString(""), b)))
 
   def choice[T](list: List[Parser[T]])(using semigroup: SemigroupK[Parser]): Parser[T] =
     list.reduce((acc, cur) => semigroup.combineK(acc, cur))
@@ -74,9 +65,6 @@ object Combinators:
     choice(parsers)
 
   extension[A] (p1: Parser[A])
-    def mapP[T1](f: A => T1)(using functor: Functor[Parser]): Parser[T1] =
-      functor.map(p1)(f)
-
     def andThen[B](p2: Parser[B]): Parser[(A, B)]=
       Parser { str =>
         for
@@ -94,6 +82,8 @@ object ParserCombinatorsV3 extends App {
   import cats.syntax.all._
   import cats.Semigroup
 
+  println(pstring("true1").run("true"))
+
   val pA = pchar('A')
   val pB = pchar('B')
   val pC = pchar('C')
@@ -106,7 +96,7 @@ object ParserCombinatorsV3 extends App {
   println(aAndThenBorC("QBZ")) // Failure "Expecting 'A'. Got 'Q'"
   println(aAndThenBorC("AQZ")) // Failure "Expecting 'C'. Got 'Q'"
 
-  val parseABC = pA |+| pB //|+| pC
+  val parseABC = pA |+| pB
 
   val digitChars = '0' to '9'
   val parseDigit = anyOf(('0' to '9').toList)
