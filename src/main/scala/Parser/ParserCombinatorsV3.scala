@@ -64,6 +64,24 @@ object Combinators:
     val parsers = list.map(pchar)
     choice(parsers)
 
+  /// matches zero or more occurences of the specified parser
+  def many[T](p: Parser[T]): Parser[List[T]] =
+    Parser(str => Right(parseZeroOrMore(p)(str)))
+
+  /// matches one or more occurences of the specified parser
+  def many1[T](p: Parser[T])(using monad: FlatMap[Parser]): Parser[List[T]] =
+    many(p) >>= (tail => monad.map(p)(head => head :: tail))
+
+  def parseZeroOrMore[T](p: Parser[T]) (str: String): (List[T], String) =
+    p.run(str) match
+      case Left(_) => (List(), str)
+      case Right((firstValue, firstRemaining)) =>
+        val (subsequentValues, subsequentRemaining) = parseZeroOrMore(p)(firstRemaining)
+        val values = firstValue :: subsequentValues
+        (values,  subsequentRemaining)
+
+  def manyChars1 (cp: Parser[Char]): Parser[String] = ???
+
   extension[A] (p1: Parser[A])
     def andThen[B](p2: Parser[B]): Parser[(A, B)]=
       Parser { str =>
@@ -75,6 +93,12 @@ object Combinators:
 
     def |+| (p2: Parser[A]): Parser[(A, A)] = p1.andThen(p2)
 
+    def >>= [B](f: A => Parser[B])(using monad: FlatMap[Parser]): Parser[B] =
+      monad.flatMap(p1)(f)
+
+//    def <!> [B](f: A => B)(using functor: Functor[Parser]): Parser[B] =
+//      functor.map(p1)(f)
+
 
 object ParserCombinatorsV3 extends App {
 
@@ -82,44 +106,37 @@ object ParserCombinatorsV3 extends App {
   import cats.syntax.all._
   import cats.Semigroup
 
-  println(pstring("true1").run("true"))
+  val p = pstring("true")
+  println(parseZeroOrMore(p)("truetru1e"))
+  println(pstring("true").run("truecs"))
 
-  val pA = pchar('A')
-  val pB = pchar('B')
-  val pC = pchar('C')
+//  val pA = pchar('A')
+//  val pB = pchar('B')
+//  val pC = pchar('C')
+//
+//  println(pA.run("acs"))
 
-  val bOrElseC = pB <+> pC
-  val aAndThenBorC = pA |+| bOrElseC
-
-  println(aAndThenBorC("ABZ")) // Success (('A', 'B'), "Z")
-  println(aAndThenBorC("ACZ")) // Success (('A', 'C'), "Z")
-  println(aAndThenBorC("QBZ")) // Failure "Expecting 'A'. Got 'Q'"
-  println(aAndThenBorC("AQZ")) // Failure "Expecting 'C'. Got 'Q'"
-
-  val parseABC = pA |+| pB
-
-  val digitChars = '0' to '9'
-  val parseDigit = anyOf(('0' to '9').toList)
-  //val parseThreeDigits = parseDigit |+| parseDigit |+| parseDigit
-  //val mapped = parseThreeDigits.mapP(list => list.mkString(";"))
-
-//  println(mapped("123dsvc"))
-  //println(parseThreeDigits("123"))
-  println(parseABC("ABC"))
+//
+//  val bOrElseC = pB <+> pC
+//  val aAndThenBorC = pA |+| bOrElseC
+//
+//  println(aAndThenBorC("ABZ")) // Success (('A', 'B'), "Z")
+//  println(aAndThenBorC("ACZ")) // Success (('A', 'C'), "Z")
+//  println(aAndThenBorC("QBZ")) // Failure "Expecting 'A'. Got 'Q'"
+//  println(aAndThenBorC("AQZ")) // Failure "Expecting 'C'. Got 'Q'"
+//
+//  val parseABC = pA |+| pB
+//
+//  val digitChars = '0' to '9'
+//  val parseDigit = anyOf(('0' to '9').toList)
+//  //val parseThreeDigits = parseDigit |+| parseDigit |+| parseDigit
+//  //val mapped = parseThreeDigits.mapP(list => list.mkString(";"))
+//
+////  println(mapped("123dsvc"))
+//  //println(parseThreeDigits("123"))
+//  println(parseABC("ABC"))
 
 //  type ParseResult[T] = Either[String, (T, String)]
 //  type Parser[T] = Reader[String, ParseResult[T]]
 
-  type MyResult[T] = Either[String, T]
-  type MyParserT[T] = ReaderT[Id, String, MyResult[T]]
-  type MyParser[T] = Reader[String, MyResult[T]]
-  val readerT = new MyParserT(s => Right(s))
-  //readerT.map(x => )
-
-  val reader = new MyParser(s => Right(s))
-  //reader.map(x => )
-
-  given parserCharApplicative: Applicative[MyParserT] with
-    override def pure[A](x: A): MyParserT[A] = ???
-    override def ap[A, B](ff: MyParserT[A => B])(fa: MyParserT[A]): MyParserT[B] = ???
 }
