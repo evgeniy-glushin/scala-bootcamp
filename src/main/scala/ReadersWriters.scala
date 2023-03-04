@@ -1,7 +1,24 @@
-import cats.data.Writer
+import cats.data.AndThen.andThen
+import cats.data.{Reader, Writer}
+
+
+
 
 object ReadersWriters extends App {
   import cats.data.Reader
+
+  val add1 = (n: Int) => n + 1
+  val toStr = (n: Int) => n.toString
+
+  val add1Reader: Reader[Int, Int] = Reader(add1)
+  val toStrReader: Reader[Int, String] = Reader(toStr)
+
+  //add1Reader.traverse()
+  val program = add1Reader.map(_ * 2).andThen(toStrReader)
+
+  println(program.run(21))
+
+  //val res = add1(1).and toString
 
   case class Configuration(dbUsername: String, dbPassword: String,  host: String, port: Int)
   case class DbConnection(username: String, password: String):

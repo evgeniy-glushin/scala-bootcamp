@@ -63,6 +63,8 @@ object Combinators:
     val parsers = list.map(pchar)
     choice(parsers)
 
+//  let satisfy predicate label =
+
   /// matches zero or more occurences of the specified parser
   def many[T](p: Parser[T]): Parser[List[T]] =
     Parser(str => Right(parseZeroOrMore(p)(str)))
