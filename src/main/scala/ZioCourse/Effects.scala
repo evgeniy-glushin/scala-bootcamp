@@ -3,17 +3,34 @@ package ZioCourse
 import scala.io.StdIn
 import zio.*
 
+import java.io.IOException
 import scala.util.{Failure, Success, Try}
 
 object EffectsApp {
-   def sequenceTakeLast[R, E, A, B](za: ZIO[R, E, A], zb: ZIO[R, E, B]): ZIO[R, E, B] =
-     za *> zb
+
+  def zip[E, A, B](fi1: Fiber[E, A], fi2: Fiber[E, B]): ZIO[Any, Nothing, Fiber[E, (A, B)]] =
+//    val (f1, f2) = (fi1.join, fi2.join)
+//    f1.flatMap(f11 => f2.map(f22 => (f11, f22))).fork
+    fi1.mapFiber(f1 => fi2.map(f2 => (f1, f2)))
+
+  val aBadFailure: Task[Int] = ZIO.succeed[Int](throw new RuntimeException("this is bad"))
+  val aBetterFailure = aBadFailure.sandbox
+  var aBetterFailureV2 = aBadFailure.unrefine { case e => e }
+  //aBadFailure.for k
+
+  def ioException[R, A](zio: ZIO[R, Throwable, A]): ZIO[R, IOException, A] =
+    zio.refineOrDie[IOException] { case e: IOException => e }
+
+  def left[R, E, A, B](zio: ZIO[R, E, Either[A, B]]): ZIO[R, Either[E, A], B] = ???
+
+  def sequenceTakeLast[R, E, A, B](za: ZIO[R, E, A], zb: ZIO[R, E, B]): ZIO[R, E, B] =
+    za *> zb
 
   def sequenceTakeFirst[R, E, A, B](za: ZIO[R, E, A], zb: ZIO[R, E, B]): ZIO[R, E, A] =
     za <* zb
 
   def runForever[R, E, A](zio: ZIO[R, E, A]): ZIO[R, E, A] =
-    zio *> runForever(zio) //zio.flatMap(_ => runForever(zio))
+    zio *> runForever(zio)
 
   val endlessLoop = runForever {
     ZIO.succeed {
@@ -36,8 +53,6 @@ object EffectsApp {
 
     def flatMap[B](f: A => MyIO[B]): MyIO[B] =
       MyIO(() => f( unsafeRun()).unsafeRun())
-  end MyIO
-
 }
 
 object MyZioApp extends ZIOAppDefault {
@@ -45,5 +60,6 @@ object MyZioApp extends ZIOAppDefault {
 
   override def run: ZIO[Any, Any, Any] =
     sum(1200).debug
+    aBadFailure.debug
     //sum(20000).flatMap(s => Console.printLine(s"$s"))
 }
