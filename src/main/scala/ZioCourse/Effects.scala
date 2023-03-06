@@ -8,6 +8,12 @@ import scala.util.{Failure, Success, Try}
 
 object EffectsApp {
 
+  def timeout[R, E, A](zio: ZIO[R, E, A], time: Duration): ZIO[R, E, A] = for {
+    fib <- zio.fork
+    _ <- ZIO.sleep(time) *> fib.interruptFork
+    result <- fib.join
+  } yield result
+
   def zip[E, A, B](fi1: Fiber[E, A], fi2: Fiber[E, B]): ZIO[Any, Nothing, Fiber[E, (A, B)]] =
 //    val (f1, f2) = (fi1.join, fi2.join)
 //    f1.flatMap(f11 => f2.map(f22 => (f11, f22))).fork
